@@ -6,7 +6,7 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      - key_data:/data
+      - /data/key-server:/data
     environment:
       - DB_PATH=/data/keys.db
       - SECRET_KEY=${SECRET_KEY:-key-server-secret-change-in-production}
@@ -19,6 +19,3 @@ services:
 networks:
   keynet:
     driver: bridge
-
-volumes:
-  key_data:
