@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <h2>{{ stats.total_secrets }}</h2>
+            <p>Total Secrets</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <h2>{{ stats.active_keys }}</h2>
+            <p>Active API Keys</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <h2>{{ stats.categories }}</h2>
+            <p>Categories</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <h2>{{ stats.recent_access }}</h2>
+            <p>Accessed (24h)</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clock"></i> Recent Secrets</div>
+            <div class="card-body">
+                {% for s in recent_secrets %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong><a href="/secrets/{{ s.id }}" class="text-decoration-none">{{ s.name }}</a></strong>
+                        <br><small class="text-muted">{{ s.category }} / {{ s.environment }}</small>
+                    </div>
+                    <span class="badge badge-cat">{{ s.category }}</span>
+                </div>
+                {% else %}
+                <p class="text-muted">No secrets yet</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-activity"></i> Recent Activity</div>
+            <div class="card-body">
+                {% for a in recent_audit %}
+                <div class="audit-item">
+                    <strong class="action-{{ a.action }}">{{ a.action }}</strong>
+                    <span class="text-muted">— {{ a.secret_name }}</span>
+                    <br><small class="text-muted">{{ a.timestamp }}{% if a.user %} by {{ a.user }}{% endif %}</small>
+                </div>
+                {% else %}
+                <p class="text-muted">No activity yet</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

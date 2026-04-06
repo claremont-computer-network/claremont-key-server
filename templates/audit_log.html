@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h2><i class="bi bi-clock-history"></i> Audit Log</h2>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        {% for log in logs %}
+        <div class="audit-item">
+            <strong class="action-{{ log.action }}">{{ log.action }}</strong>
+            <span class="text-muted">— {{ log.secret_name }}</span>
+            {% if log.user %}<span class="text-muted">by {{ log.user }}</span>{% endif %}
+            {% if log.details %}<br><small class="text-muted">{{ log.details }}</small>{% endif %}
+            <br><small class="text-muted">{{ log.timestamp }}</small>
+        </div>
+        {% else %}
+        <p class="text-muted">No audit log entries yet</p>
+        {% endfor %}
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5>Summary</h5>
+                <p><strong>Total Entries:</strong> {{ total }}</p>
+                <p><strong>Showing:</strong> Page {{ page }}</p>
+                {% if page > 1 %}
+                <a href="?page={{ page - 1 }}" class="btn btn-sm btn-outline-secondary">Previous</a>
+                {% endif %}
+                {% if page * per_page < total %}
+                <a href="?page={{ page + 1 }}" class="btn btn-sm btn-outline-secondary">Next</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
