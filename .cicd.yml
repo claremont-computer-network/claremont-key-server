@@ -17,8 +17,18 @@ stages:
   - name: Deploy Key Server
     type: deploy
     commands:
+      - 'docker stop claremont-key-server 2>/dev/null || true'
+      - 'docker rm claremont-key-server 2>/dev/null || true'
       - 'docker compose down || true'
       - 'docker compose up -d --build'
       - 'sleep 10'
-      - 'curl -sf http://localhost:5001/api/v1/health'
+      - 'docker exec claremont-key-server curl -sf http://localhost:5001/api/v1/health'
     timeout: 300
+
+  - name: Verify DNS
+    type: deploy
+    commands:
+      - 'sleep 5'
+      - 'curl -sk --connect-timeout 10 https://keys.claremontcomputer.net/login -o /dev/null -w "%{http_code}" | grep -q "200"'
+    timeout: 60
+    continue_on_failure: true
