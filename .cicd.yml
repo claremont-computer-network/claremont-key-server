@@ -1,0 +1,24 @@
+name: Claremont Key Server Pipeline
+stages:
+  - name: Run Tests
+    type: test
+    test_dir: tests
+    commands:
+      - 'python -m pytest {test_dir} -v --tb=short'
+    timeout: 300
+    continue_on_failure: false
+
+  - name: Build Docker Image
+    type: command
+    commands:
+      - 'docker build -t claremont-key-server:latest .'
+    timeout: 300
+
+  - name: Deploy Key Server
+    type: deploy
+    commands:
+      - 'docker compose down || true'
+      - 'docker compose up -d --build'
+      - 'sleep 10'
+      - 'curl -sf http://localhost:5001/api/v1/health'
+    timeout: 300

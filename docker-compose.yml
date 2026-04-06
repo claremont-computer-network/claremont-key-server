@@ -1,0 +1,24 @@
+services:
+  key-server:
+    build: .
+    container_name: claremont-key-server
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      - key_data:/data
+    environment:
+      - DB_PATH=/data/keys.db
+      - SECRET_KEY=${SECRET_KEY:-key-server-secret-change-in-production}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - OPERATOR_PASSWORD=${OPERATOR_PASSWORD:-operator123}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-change-me-in-production}
+    networks:
+      - keynet
+
+networks:
+  keynet:
+    driver: bridge
+
+volumes:
+  key_data:
