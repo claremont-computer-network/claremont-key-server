@@ -23,7 +23,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'key-server-secret-change-in-produ
 DB_PATH = os.environ.get('DB_PATH', os.path.join(BASE_DIR, 'data', 'keys.db'))
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', 'default-encryption-key-change-me')
 
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+db_dir = os.path.dirname(DB_PATH)
+if db_dir:
+    os.makedirs(db_dir, exist_ok=True)
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)

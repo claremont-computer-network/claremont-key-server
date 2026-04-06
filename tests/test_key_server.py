@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Tests for Claremont Key Server."""
 import os
+import tempfile
 import unittest
 from unittest.mock import patch
 
+_test_db = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
+_test_db.close()
+
 os.environ['TESTING'] = 'true'
-os.environ['DB_PATH'] = ':memory:'
+os.environ['DB_PATH'] = _test_db.name
 os.environ['ADMIN_PASSWORD'] = 'testpass'
 
 from app import app, init_db
@@ -13,7 +17,6 @@ from app import app, init_db
 class TestKeyServer(unittest.TestCase):
     def setUp(self):
         self.app = app.test_client()
-        self.app.testing = True
 
     def test_login_page(self):
         resp = self.app.get('/login')
