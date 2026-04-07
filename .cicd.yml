@@ -29,6 +29,6 @@ stages:
     type: deploy
     commands:
       - 'sleep 5'
-      - 'curl -sk --connect-timeout 10 https://keys.claremontcomputer.net/login -o /dev/null -w "%{http_code}" | grep -q "200"'
+      - 'curl -sk --connect-timeout 10 https://keys.claremontcomputer.net/login -o /dev/null -w "HTTP_CODE:%{http_code}" | grep -q "HTTP_CODE:200"'
     timeout: 60
     continue_on_failure: true
