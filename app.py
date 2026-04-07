@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import datetime
 import sqlite3
+from cryptography.fernet import Fernet
 from pathlib import Path
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
 from functools import wraps
@@ -22,6 +23,22 @@ app.secret_key = os.environ.get('SECRET_KEY', 'key-server-secret-change-in-produ
 # Configuration
 DB_PATH = os.environ.get('DB_PATH', os.path.join(BASE_DIR, 'data', 'keys.db'))
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', 'default-encryption-key-change-me')
+
+# Derive Fernet key from ENCRYPTION_KEY (must be 32 url-safe base64-encoded bytes)
+def _get_fernet():
+    key = hashlib.sha256(ENCRYPTION_KEY.encode()).digest()
+    import base64
+    return Fernet(base64.urlsafe_b64encode(key))
+
+_cipher = _get_fernet()
+
+def encrypt_value(value):
+    """Encrypt a secret value for storage."""
+    return _cipher.encrypt(value.encode()).decode()
+
+def decrypt_value(encrypted_value):
+    """Decrypt a secret value from storage."""
+    return _cipher.decrypt(encrypted_value.encode()).decode()
 
 db_dir = os.path.dirname(DB_PATH)
 if db_dir:
@@ -115,16 +132,37 @@ def require_api_key(f):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        valid_users = {
-            'admin': os.environ.get('ADMIN_PASSWORD', 'admin123'),
-            'operator': os.environ.get('OPERATOR_PASSWORD', 'operator123')
-        }
-        if username in valid_users and valid_users[username] == password:
-            session['user'] = username
-            return redirect(url_for('dashboard'))
-        flash('Invalid credentials', 'error')
+        email = request.form.get('email') or request.form.get('username')
+        api_key = request.form.get('api_key') or request.form.get('password')
+        
+        # Authenticate via email + API key (Claremont pattern)
+        if email and api_key:
+            key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+            db = get_db()
+            user = db.execute('SELECT * FROM api_keys WHERE key_hash = ? AND is_active = 1 AND name = ?', 
+                             (key_hash, email)).fetchone()
+            if not user:
+                # Try email as username with password fallback
+                valid_users = {
+                    'admin': os.environ.get('ADMIN_PASSWORD', 'admin123'),
+                    'operator': os.environ.get('OPERATOR_PASSWORD', 'operator123')
+                }
+                if email in valid_users and valid_users[email] == api_key:
+                    session['user'] = email
+                    session['auth_method'] = 'password'
+                    db.close()
+                    return redirect(url_for('dashboard'))
+                flash('Invalid email or API key', 'error')
+            else:
+                session['user'] = user['name']
+                session['auth_method'] = 'api_key'
+                db.execute('UPDATE api_keys SET last_used = datetime("now") WHERE id = ?', (user['id'],))
+                db.commit()
+                db.close()
+                return redirect(url_for('dashboard'))
+            db.close()
+        else:
+            flash('Email and API key required', 'error')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -174,7 +212,7 @@ def secrets_list():
 def add_secret():
     secret_id = str(uuid.uuid4())[:8]
     name = request.form['name']
-    value = request.form['value']
+    value = encrypt_value(request.form['value'])
     category = request.form.get('category', 'general')
     environment = request.form.get('environment', 'production')
     description = request.form.get('description', '')
