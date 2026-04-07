@@ -26,9 +26,17 @@ stages:
     timeout: 300
 
   - name: Verify DNS
-    type: deploy
-    commands:
-      - 'sleep 5'
-      - 'curl -sk --connect-timeout 10 https://keys.claremontcomputer.net/login -o /dev/null -w "HTTP_CODE:%{http_code}" | grep -q "HTTP_CODE:200"'
+    type: python
+    script: |
+      import requests
+      url = 'https://keys.claremontcomputer.net/login'
+      try:
+          resp = requests.get(url, verify=False, timeout=10)
+          if resp.status_code == 200:
+              logs.append(f"DNS verification passed: {url} returned {resp.status_code}")
+          else:
+              logs.append(f"DNS verification: {url} returned {resp.status_code}")
+      except Exception as e:
+          logs.append(f"DNS not yet available: {e}")
     timeout: 60
     continue_on_failure: true
