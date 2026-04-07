@@ -27,16 +27,6 @@ stages:
 
   - name: Verify DNS
     type: python
-    script: |
-      import requests
-      url = 'https://keys.claremontcomputer.net/login'
-      try:
-          resp = requests.get(url, verify=False, timeout=10)
-          if resp.status_code == 200:
-              logs.append(f"DNS verification passed: {url} returned {resp.status_code}")
-          else:
-              logs.append(f"DNS verification: {url} returned {resp.status_code}")
-      except Exception as e:
-          logs.append(f"DNS not yet available: {e}")
+    script_file: scripts/verify_deploy.py
     timeout: 60
     continue_on_failure: true
