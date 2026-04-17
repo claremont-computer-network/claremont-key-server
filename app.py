@@ -135,32 +135,34 @@ def login():
         email = request.form.get('email') or request.form.get('username')
         api_key = request.form.get('api_key') or request.form.get('password')
         
-        # Authenticate via email + API key (Claremont pattern)
+        # Validate against claremontcomputer.net API
+        CLAREMONT_API_URL = os.environ.get('CLAREMONT_API_URL', 'https://claremontcomputer.net')
         if email and api_key:
-            key_hash = hashlib.sha256(api_key.encode()).hexdigest()
-            db = get_db()
-            user = db.execute('SELECT * FROM api_keys WHERE key_hash = ? AND is_active = 1 AND name = ?', 
-                             (key_hash, email)).fetchone()
-            if not user:
-                # Try email as username with password fallback
-                valid_users = {
-                    'admin': os.environ.get('ADMIN_PASSWORD', 'admin123'),
-                    'operator': os.environ.get('OPERATOR_PASSWORD', 'operator123')
-                }
-                if email in valid_users and valid_users[email] == api_key:
+            try:
+                import requests
+                resp = requests.get(
+                    f"{CLAREMONT_API_URL}/api/keys",
+                    headers={"X-Api-Key": api_key},
+                    timeout=10
+                )
+                if resp.status_code == 200:
                     session['user'] = email
-                    session['auth_method'] = 'password'
-                    db.close()
+                    session['api_key'] = api_key
+                    session['auth_method'] = 'claremont_api'
                     return redirect(url_for('dashboard'))
-                flash('Invalid email or API key', 'error')
-            else:
-                session['user'] = user['name']
-                session['auth_method'] = 'api_key'
-                db.execute('UPDATE api_keys SET last_used = datetime("now") WHERE id = ?', (user['id'],))
-                db.commit()
-                db.close()
+            except Exception as e:
+                print(f"API validation error: {e}")
+            
+            # Fallback to password auth
+            valid_users = {
+                'admin': os.environ.get('ADMIN_PASSWORD', 'admin123'),
+                'operator': os.environ.get('OPERATOR_PASSWORD', 'operator123')
+            }
+            if email in valid_users and valid_users[email] == api_key:
+                session['user'] = email
+                session['auth_method'] = 'password'
                 return redirect(url_for('dashboard'))
-            db.close()
+            flash('Invalid email or API key', 'error')
         else:
             flash('Email and API key required', 'error')
     return render_template('login.html')
