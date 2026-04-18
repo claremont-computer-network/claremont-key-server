@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import datetime
 import sqlite3
+import requests
 from cryptography.fernet import Fernet
 from pathlib import Path
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
@@ -111,6 +112,24 @@ def require_auth(f):
 def require_api_key(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Try CWS Bearer token first
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            cws_token = auth_header[7:]
+            cws_url = os.environ.get('CWS_URL', 'http://ec2-54-89-192-212.compute-1.amazonaws.com:8000')
+            try:
+                resp = requests.get(
+                    f'{cws_url}/api/user/info',
+                    headers={'Authorization': f'Bearer {cws_token}'},
+                    timeout=5
+                )
+                if resp.status_code == 200:
+                    request.api_key = {'name': 'cws-bearer', 'id': 'cws-bearer'}
+                    return f(*args, **kwargs)
+            except Exception:
+                pass
+        
+        # Fall back to X-API-Key
         api_key = request.headers.get('X-API-Key') or request.args.get('api_key')
         if not api_key:
             return jsonify({'error': 'API key required'}), 401
